@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SpyFall.Api.Data;
+using SpyFall.Api.DTOs;
 using SpyFall.Api.Models;
 
 namespace SpyFall.Api.Controllers;
@@ -33,5 +34,52 @@ public class GamesController(AppDbContext db) : ControllerBase
 		await mDb.SaveChangesAsync();
 
 		return Ok(gameCode);
+	}
+
+	[HttpPost("{code}/join")]
+	public async Task<IActionResult> JoinGame([FromRoute] string code, [FromBody] JoinGameRequest request)
+	{
+		Game? game = await mDb.Games
+			.Include(x => x.Players)
+			.FirstOrDefaultAsync(x => x.Code == code);
+
+		if (game == null) return BadRequest("Game not found");
+		if (game.Players.Any(x => x.Name == request.Name)) return BadRequest("Name in use");
+		if (game.Players.Count >= 10) return BadRequest("Game is full");
+
+		Player player = new()
+		{
+			Name = request.Name
+		};
+
+		game.Players.Add(player);
+
+		try
+		{
+			await mDb.SaveChangesAsync();
+		}
+		catch (DbUpdateException)
+		{
+			return BadRequest("Name in use");
+		}
+
+		return Ok(player.Id);
+	}
+
+	[HttpGet("{code}")]
+	public async Task<IActionResult> GetStatus([FromRoute] string code)
+	{
+		Game? game = await mDb.Games
+			.Include(x => x.Players)
+			.FirstOrDefaultAsync(x => x.Code == code);
+
+		if (game == null) return BadRequest("Game not found");
+
+		return Ok(new GameStatusResponse
+		{
+			Code = game.Code,
+			Status = game.Status.ToString(),
+			Players = [.. game.Players.Select(p => p.Name)]
+		});
 	}
 }

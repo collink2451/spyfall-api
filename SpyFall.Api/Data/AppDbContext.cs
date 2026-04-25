@@ -9,4 +9,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 	public DbSet<Role> Roles => Set<Role>();
 	public DbSet<Game> Games => Set<Game>();
 	public DbSet<Player> Players => Set<Player>();
+
+	protected override void OnModelCreating(ModelBuilder modelBuilder)
+	{
+		modelBuilder.Entity<Player>()
+			.HasIndex(p => new { p.GameId, p.Name })
+			.IsUnique();
+	}
 }
