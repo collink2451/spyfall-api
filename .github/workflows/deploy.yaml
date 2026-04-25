@@ -39,6 +39,12 @@ jobs:
       - name: "Publish"
         run: dotnet publish SpyFall.Api/SpyFall.Api.csproj --no-build --configuration Release --output ./artifacts
 
+      - name: "Install dotnet-ef"
+        run: dotnet tool install --global dotnet-ef
+
+      - name: "Create Migrations Bundle"
+        run: dotnet ef migrations bundle --project SpyFall.Api/SpyFall.Api.csproj --runtime linux-x64 --output ./artifacts/migrate
+
       - name: "Copy Files"
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -50,11 +56,13 @@ jobs:
           target: "/var/www/spyfall-api"
           strip_components: 1
 
-      - name: "Restart Service"
+      - name: "Run Migrations and Restart Service"
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          script: sudo systemctl restart spyfall-api
+          script: |
+            /var/www/spyfall-api/migrate --connection "${{ secrets.DB_CONNECTION_STRING }}"
+            sudo systemctl restart spyfall-api
