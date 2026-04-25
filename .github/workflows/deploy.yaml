@@ -31,7 +31,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: "Restore"
-        run: dotnet restore SpyFall.Api/SpyFall.Api.csproj
+        run: dotnet restore SpyFall.Api/SpyFall.Api.csproj --runtime linux-x64
 
       - name: "Build"
         run: dotnet build SpyFall.Api/SpyFall.Api.csproj --no-restore --configuration Release
