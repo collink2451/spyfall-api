@@ -3,15 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using SpyFall.Api.Data;
 using SpyFall.Api.DTOs;
 using SpyFall.Api.Models;
+using SpyFall.Api.Services;
 
 namespace SpyFall.Api.Hubs;
 
-public class GameHub(AppDbContext db) : Hub
+public class GameHub(AppDbContext db, GameTimerService timerService, VoteService voteService) : Hub
 {
 	private readonly AppDbContext mDb = db;
-
-	// In-memory vote tracking: gameCode -> (accusedPlayerId, votes: playerId -> guilty)
-	private static readonly Dictionary<string, (int AccusedId, Dictionary<int, bool> Votes)> ActiveVotes = [];
+	private readonly GameTimerService mTimerService = timerService;
+	private readonly VoteService mVoteService = voteService;
 
 	public async Task JoinRoom(string code, int playerId)
 	{
@@ -96,6 +96,35 @@ public class GameHub(AppDbContext db) : Hub
 				await Clients.Client(player.ConnectionId).SendAsync("GameStarted", role.Name, location.Name);
 			}
 		}
+
+		int duration = mTimerService.StartTimer(code);
+		await Clients.Group(code).SendAsync("TimerStarted", duration);
+	}
+
+	public async Task GetTimerState(string code)
+	{
+		GameTimerState? state = mTimerService.GetTimer(code);
+		if (state == null) return;
+
+		await Clients.Caller.SendAsync("TimerState", state.GetRemainingSeconds(), state.IsPaused);
+	}
+
+	public async Task PauseTimer(string code, int requestingPlayerId)
+	{
+		Game? game = await mDb.Games.FirstOrDefaultAsync(x => x.Code == code);
+		if (game == null || game.HostPlayerId != requestingPlayerId) return;
+
+		int remaining = mTimerService.PauseTimer(code);
+		await Clients.Group(code).SendAsync("TimerPaused", remaining);
+	}
+
+	public async Task ResumeTimer(string code, int requestingPlayerId)
+	{
+		Game? game = await mDb.Games.FirstOrDefaultAsync(x => x.Code == code);
+		if (game == null || game.HostPlayerId != requestingPlayerId) return;
+
+		int remaining = mTimerService.ResumeTimer(code);
+		await Clients.Group(code).SendAsync("TimerResumed", remaining);
 	}
 
 	public async Task SetReady(string code, int playerId, bool isReady)
@@ -183,7 +212,7 @@ public class GameHub(AppDbContext db) : Hub
 
 		if (game == null || game.Status != GameStatus.InProgress) return;
 
-		ActiveVotes[code] = (accusedPlayerId, []);
+		mVoteService.StartVote(code, accusedPlayerId);
 
 		Player? accusedPlayer = game.Players.FirstOrDefault(p => p.Id == accusedPlayerId);
 		if (accusedPlayer == null) return;
@@ -198,9 +227,9 @@ public class GameHub(AppDbContext db) : Hub
 			.Include(x => x.Location)
 			.FirstOrDefaultAsync(x => x.Code == code);
 
-		if (game == null || !ActiveVotes.TryGetValue(code, out (int AccusedId, Dictionary<int, bool> Votes) voteState)) return;
+		if (game == null || !mVoteService.TryGetVote(code, out (int AccusedId, Dictionary<int, bool> Votes) voteState)) return;
 
-		voteState.Votes[votingPlayerId] = guilty;
+		mVoteService.CastVote(code, votingPlayerId, guilty);
 
 		int totalPlayers = game.Players.Count;
 		int majority = totalPlayers / 2 + 1;
@@ -209,14 +238,14 @@ public class GameHub(AppDbContext db) : Hub
 
 		if (guiltyVotes >= majority)
 		{
-			ActiveVotes.Remove(code);
+			mVoteService.RemoveVote(code);
 			Player accused = game.Players.First(p => p.Id == voteState.AccusedId);
 			bool spyCaught = accused.IsSpy;
 			await EndGameInternal(code, game, spyCaught ? "PlayersWin" : "SpyWins");
 		}
 		else if (notGuiltyVotes >= majority)
 		{
-			ActiveVotes.Remove(code);
+			mVoteService.RemoveVote(code);
 			await Clients.Group(code).SendAsync("VoteResult", "NotGuilty");
 		}
 		else
@@ -264,6 +293,8 @@ public class GameHub(AppDbContext db) : Hub
 
 		await Clients.Group(code).SendAsync("GameEnded", outcome, locationName, spyName);
 
+		mTimerService.RemoveTimer(code);
+		mVoteService.RemoveVote(code);
 		game.Status = GameStatus.Waiting;
 		game.LocationId = null;
 		game.LastActivityAt = DateTime.UtcNow;

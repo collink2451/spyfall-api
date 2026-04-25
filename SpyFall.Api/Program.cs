@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SpyFall.Api.Data;
 using SpyFall.Api.Hubs;
+using SpyFall.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<GameTimerService>();
+builder.Services.AddSingleton<VoteService>();
+builder.Services.AddHostedService<TimerSyncService>();
 
 builder.Services.AddCors(options =>
 {
