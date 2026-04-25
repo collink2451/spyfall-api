@@ -268,4 +268,21 @@ public class GameHub(AppDbContext db) : Hub
 
 		await mDb.SaveChangesAsync();
 	}
+
+	public override async Task OnDisconnectedAsync(Exception? exception)
+	{
+		Player? player = await mDb.Players
+			.Include(x => x.Game)
+			.FirstOrDefaultAsync(p => p.ConnectionId == Context.ConnectionId);
+
+		if (player != null)
+		{
+			if (player.Game.Status != GameStatus.InProgress)
+			{
+				await RemovePlayerInternal(player.Game.Code, player.Id);
+			}
+		}
+
+		await base.OnDisconnectedAsync(exception);
+	}
 }
