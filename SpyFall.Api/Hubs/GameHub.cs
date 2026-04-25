@@ -113,6 +113,65 @@ public class GameHub(AppDbContext db) : Hub
 		await Clients.Group(code).SendAsync("ReadyStateChanged", playerStatuses);
 	}
 
+	public async Task LeaveGame(string code, int playerId)
+	{
+		await RemovePlayerInternal(code, playerId);
+	}
+
+	public async Task KickPlayer(string code, int hostPlayerId, int targetPlayerId)
+	{
+		Game? game = await mDb.Games
+			.FirstOrDefaultAsync(x => x.Code == code);
+
+		if (game == null) return;
+		if (game.HostPlayerId != hostPlayerId) return;
+
+		await RemovePlayerInternal(code, targetPlayerId, kicked: true);
+	}
+
+	private async Task RemovePlayerInternal(string code, int playerId, bool kicked = false)
+	{
+		Game? game = await mDb.Games
+			.Include(x => x.Players)
+			.FirstOrDefaultAsync(x => x.Code == code);
+
+		if (game == null) return;
+
+		Player? player = game.Players.FirstOrDefault(p => p.Id == playerId);
+		if (player == null) return;
+
+		// Notify the removed player
+		if (!string.IsNullOrEmpty(player.ConnectionId))
+		{
+			await Clients.Client(player.ConnectionId).SendAsync("RemovedFromGame", kicked ? "You were kicked." : "You left the game.");
+			await Groups.RemoveFromGroupAsync(player.ConnectionId, code);
+		}
+
+		game.Players.Remove(player);
+		mDb.Players.Remove(player);
+
+		// If no players left, delete the game
+		if (game.Players.Count == 0)
+		{
+			mDb.Games.Remove(game);
+			await mDb.SaveChangesAsync();
+			return;
+		}
+
+		// If the leaving player was the host, assign host to the next player
+		if (game.HostPlayerId == playerId)
+		{
+			game.HostPlayerId = game.Players.First().Id;
+			await Clients.Client(game.Players.First().ConnectionId).SendAsync("PromotedToHost");
+		}
+
+		game.LastActivityAt = DateTime.UtcNow;
+		await mDb.SaveChangesAsync();
+
+		List<string> playerNames = game.Players.Select(p => p.Name).ToList();
+		await Clients.Group(code).SendAsync("PlayerLeft", playerNames);
+	}
+
 	public async Task AccusePlayer(string code, int accusedPlayerId)
 	{
 		Game? game = await mDb.Games
