@@ -1,0 +1,59 @@
+name: "Deploy"
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.gitignore"
+      - "**/*.gitattributes"
+  workflow_dispatch:
+    branches:
+      - master
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.gitignore"
+      - "**/*.gitattributes"
+
+jobs:
+  dotnet-workflow:
+    name: "Deploy .NET Application"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Set up .NET"
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: "Restore"
+        run: dotnet restore SpyFall.Api/SpyFall.Api.csproj
+
+      - name: "Build"
+        run: dotnet build SpyFall.Api/SpyFall.Api.csproj --no-restore --configuration Release
+
+      - name: "Publish"
+        run: dotnet publish SpyFall.Api/SpyFall.Api.csproj --no-build --configuration Release --output ./publish
+
+      - name: "Copy Files"
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "./publish/*"
+          target: "/var/www/spyfall-api"
+
+      - name: "Restart Service"
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: sudo systemctl restart spyfall-api
