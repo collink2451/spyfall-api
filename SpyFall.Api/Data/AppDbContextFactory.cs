@@ -13,10 +13,11 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = config.GetConnectionString("DefaultConnection");
+        var connectionString = config.GetConnectionString("DefaultConnection")
+            ?? "server=localhost;database=spyfall;user=root;password=placeholder";
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+            .UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0)))
             .Options;
 
         return new AppDbContext(options);
