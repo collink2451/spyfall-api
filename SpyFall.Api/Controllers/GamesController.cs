@@ -43,7 +43,7 @@ public class GamesController(AppDbContext db) : ControllerBase
 			.Include(x => x.Players)
 			.FirstOrDefaultAsync(x => x.Code == code);
 
-		if (game == null) return BadRequest("Game not found");
+		if (game == null) return NotFound("Game not found");
 		if (game.Status != GameStatus.Waiting) return BadRequest("Game already in progress");
 
 		string name = request.Name.Trim();
@@ -79,7 +79,7 @@ public class GamesController(AppDbContext db) : ControllerBase
 			.Include(x => x.Players)
 			.FirstOrDefaultAsync(x => x.Code == code);
 
-		if (game == null) return BadRequest("Game not found");
+		if (game == null) return NotFound("Game not found");
 
 		return Ok(new GameStatusResponse
 		{

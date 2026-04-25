@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SpyFall.Api.Data;
+using SpyFall.Api.DTOs;
 using SpyFall.Api.Models;
 
 namespace SpyFall.Api.Hubs;
@@ -32,12 +33,12 @@ public class GameHub(AppDbContext db) : Hub
 
 		await mDb.SaveChangesAsync();
 
-		List<string> playerNames = await mDb.Players
+		List<PlayerResponse> players = await mDb.Players
 			.Where(p => p.GameId == player.GameId)
-			.Select(p => p.Name)
+			.Select(p => new PlayerResponse { Id = p.Id, Name = p.Name, IsReady = p.IsReady })
 			.ToListAsync();
 
-		await Clients.Group(code).SendAsync("PlayerJoined", playerNames);
+		await Clients.Group(code).SendAsync("PlayerJoined", players);
 	}
 
 	public async Task StartGame(string code, int requestingPlayerId)
@@ -105,12 +106,12 @@ public class GameHub(AppDbContext db) : Hub
 		player.IsReady = isReady;
 		await mDb.SaveChangesAsync();
 
-		List<(int Id, string Name, bool IsReady)> playerStatuses = await mDb.Players
+		List<PlayerResponse> players = await mDb.Players
 			.Where(p => p.GameId == player.GameId)
-			.Select(p => new ValueTuple<int, string, bool>(p.Id, p.Name, p.IsReady))
+			.Select(p => new PlayerResponse { Id = p.Id, Name = p.Name, IsReady = p.IsReady })
 			.ToListAsync();
 
-		await Clients.Group(code).SendAsync("ReadyStateChanged", playerStatuses);
+		await Clients.Group(code).SendAsync("ReadyStateChanged", players);
 	}
 
 	public async Task LeaveGame(string code, int playerId)
@@ -168,8 +169,10 @@ public class GameHub(AppDbContext db) : Hub
 		game.LastActivityAt = DateTime.UtcNow;
 		await mDb.SaveChangesAsync();
 
-		List<string> playerNames = game.Players.Select(p => p.Name).ToList();
-		await Clients.Group(code).SendAsync("PlayerLeft", playerNames);
+		List<PlayerResponse> players = game.Players
+			.Select(p => new PlayerResponse { Id = p.Id, Name = p.Name, IsReady = p.IsReady })
+			.ToList();
+		await Clients.Group(code).SendAsync("PlayerLeft", players);
 	}
 
 	public async Task AccusePlayer(string code, int accusedPlayerId)
