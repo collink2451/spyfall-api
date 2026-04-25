@@ -37,7 +37,7 @@ jobs:
         run: dotnet build SpyFall.Api/SpyFall.Api.csproj --no-restore --configuration Release
 
       - name: "Publish"
-        run: dotnet publish SpyFall.Api/SpyFall.Api.csproj --no-build --configuration Release --output ./publish
+        run: dotnet publish SpyFall.Api/SpyFall.Api.csproj --no-build --configuration Release --output ./artifacts
 
       - name: "Copy Files"
         uses: appleboy/scp-action@v0.1.7
@@ -46,8 +46,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          source: "./publish/*"
+          source: "./artifacts/*"
           target: "/var/www/spyfall-api"
+          strip_components: 2
 
       - name: "Restart Service"
         uses: appleboy/ssh-action@v1.2.0
