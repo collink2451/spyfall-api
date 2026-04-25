@@ -85,7 +85,13 @@ public class GamesController(AppDbContext db) : ControllerBase
 		{
 			Code = game.Code,
 			Status = game.Status.ToString(),
-			Players = [.. game.Players.Select(p => p.Name)]
+			HostPlayerId = game.HostPlayerId,
+			Players = [.. game.Players.Select(p => new PlayerResponse
+			{
+				Id = p.Id,
+				Name = p.Name,
+				IsReady = p.IsReady
+			})]
 		});
 	}
 }
