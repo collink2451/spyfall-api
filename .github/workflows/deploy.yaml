@@ -43,7 +43,7 @@ jobs:
         run: dotnet tool install --global dotnet-ef
 
       - name: "Create Migrations Bundle"
-        run: dotnet ef migrations bundle --project SpyFall.Api/SpyFall.Api.csproj --runtime linux-x64 --output ./artifacts/migrate --no-build
+        run: dotnet ef migrations bundle --project SpyFall.Api/SpyFall.Api.csproj --runtime linux-x64 --output ./artifacts/migrate
 
       - name: "Copy Files"
         uses: appleboy/scp-action@v0.1.7
