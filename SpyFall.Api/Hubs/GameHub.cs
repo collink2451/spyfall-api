@@ -60,23 +60,23 @@ public class GameHub(AppDbContext db) : Hub
 			return;
 		}
 
+		List<int> locationIds = await mDb.Locations.Select(l => l.Id).ToListAsync();
+		int randomLocationId = locationIds[Random.Shared.Next(locationIds.Count)];
 		Location location = await mDb.Locations
 			.Include(x => x.Roles)
-			.OrderBy(x => Guid.NewGuid())
-			.FirstAsync();
+			.FirstAsync(l => l.Id == randomLocationId);
 
 		game.LocationId = location.Id;
 
-		Player spy = game.Players
-			.OrderBy(x => Guid.NewGuid())
-			.First();
-
+		List<Player> playerList = [.. game.Players];
+		Player spy = playerList[Random.Shared.Next(playerList.Count)];
 		spy.IsSpy = true;
 
+		List<Role> roles = [.. location.Roles];
 		foreach (Player player in game.Players)
 		{
 			if (player.IsSpy) continue;
-			player.RoleId = location.Roles.OrderBy(x => Guid.NewGuid()).First().Id;
+			player.RoleId = roles[Random.Shared.Next(roles.Count)].Id;
 		}
 
 		game.LastActivityAt = DateTime.UtcNow;
@@ -195,6 +195,7 @@ public class GameHub(AppDbContext db) : Hub
 	{
 		Game? game = await mDb.Games
 			.Include(x => x.Players)
+			.Include(x => x.Location)
 			.FirstOrDefaultAsync(x => x.Code == code);
 
 		if (game == null || !ActiveVotes.TryGetValue(code, out (int AccusedId, Dictionary<int, bool> Votes) voteState)) return;
@@ -237,6 +238,11 @@ public class GameHub(AppDbContext db) : Hub
 		await EndGameInternal(code, game, correct ? "SpyWins" : "PlayersWin");
 	}
 
+	public async Task PlayAgain(string code)
+	{
+		await Clients.Group(code).SendAsync("PlayAgain");
+	}
+
 	public async Task EndGame(string code, int requestingPlayerId, bool spyWon)
 	{
 		Game? game = await mDb.Games
@@ -274,13 +280,20 @@ public class GameHub(AppDbContext db) : Hub
 
 	public override async Task OnDisconnectedAsync(Exception? exception)
 	{
+		string disconnectedConnectionId = Context.ConnectionId;
+
 		Player? player = await mDb.Players
 			.Include(x => x.Game)
-			.FirstOrDefaultAsync(p => p.ConnectionId == Context.ConnectionId);
+			.FirstOrDefaultAsync(p => p.ConnectionId == disconnectedConnectionId);
 
-		if (player != null)
+		if (player != null && player.Game.Status != GameStatus.InProgress)
 		{
-			if (player.Game.Status != GameStatus.InProgress)
+			// Wait briefly to allow a page refresh to reconnect before removing the player
+			await Task.Delay(5000);
+
+			// Re-query — if the player reconnected, their ConnectionId will have changed
+			Player? freshPlayer = await mDb.Players.FindAsync(player.Id);
+			if (freshPlayer?.ConnectionId == disconnectedConnectionId)
 			{
 				await RemovePlayerInternal(player.Game.Code, player.Id);
 			}
