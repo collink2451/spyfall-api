@@ -10,7 +10,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseMySql("server=localhost;database=spyfall;user=root;password=placeholder",
                 new MySqlServerVersion(new Version(8, 0, 0)))
-            .Build();
+            .Options;
 
         return new AppDbContext(options);
     }
