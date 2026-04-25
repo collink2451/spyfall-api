@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SpyFall.Api.Data;
+using SpyFall.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
+
+builder.Services.AddCors(options =>
+{
+	options.AddPolicy("AllowFrontend", policy =>
+	{
+		policy.WithOrigins(
+				"http://localhost:4200",
+				"https://spyfall.collinkoldoff.dev")
+			.AllowAnyHeader()
+			.AllowAnyMethod()
+			.AllowCredentials();
+	});
+});
 
 var app = builder.Build();
 
@@ -21,6 +36,8 @@ if (app.Environment.IsDevelopment())
 	app.MapOpenApi();
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 app.MapControllers();
+app.MapHub<GameHub>("/hubs/game");
 
 app.Run();

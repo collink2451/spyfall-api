@@ -11,5 +11,8 @@ public class Game
 	public int? LocationId { get; set; }
 	public Location? Location { get; set; }
 
+	public int? HostPlayerId { get; set; }
+	public Player? Host { get; set; }
+
 	public ICollection<Player> Players { get; set; } = [];
 }

@@ -44,12 +44,18 @@ public class GamesController(AppDbContext db) : ControllerBase
 			.FirstOrDefaultAsync(x => x.Code == code);
 
 		if (game == null) return BadRequest("Game not found");
-		if (game.Players.Any(x => x.Name == request.Name)) return BadRequest("Name in use");
+		if (game.Status != GameStatus.Waiting) return BadRequest("Game already in progress");
+
+		string name = request.Name.Trim();
+		if (string.IsNullOrEmpty(name)) return BadRequest("Name cannot be empty");
+		if (name.Length > 20) return BadRequest("Name cannot exceed 20 characters");
+
+		if (game.Players.Any(x => x.Name == name)) return BadRequest("Name in use");
 		if (game.Players.Count >= 10) return BadRequest("Game is full");
 
 		Player player = new()
 		{
-			Name = request.Name
+			Name = name
 		};
 
 		game.Players.Add(player);

@@ -6,6 +6,7 @@ public class Player
 	public string Name { get; set; } = string.Empty;
 	public string ConnectionId { get; set; } = string.Empty;
 	public bool IsSpy { get; set; } = false;
+	public bool IsReady { get; set; } = false;
 
 	public int GameId { get; set; }
 	public Game Game { get; set; } = null!;

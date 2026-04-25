@@ -15,5 +15,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 		modelBuilder.Entity<Player>()
 			.HasIndex(p => new { p.GameId, p.Name })
 			.IsUnique();
+
+		modelBuilder.Entity<Game>()
+			.HasOne(g => g.Host)
+			.WithMany()
+			.HasForeignKey(g => g.HostPlayerId)
+			.OnDelete(DeleteBehavior.SetNull);
+
+		modelBuilder.Entity<Game>()
+			.HasMany(g => g.Players)
+			.WithOne(p => p.Game)
+			.HasForeignKey(p => p.GameId)
+			.OnDelete(DeleteBehavior.Cascade);
 	}
 }
