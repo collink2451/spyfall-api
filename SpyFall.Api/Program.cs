@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SpyFall.Api.Data;
 using SpyFall.Api.Hubs;
@@ -17,6 +18,22 @@ builder.Services.AddSingleton<GameTimerService>();
 builder.Services.AddSingleton<VoteService>();
 builder.Services.AddHostedService<TimerSyncService>();
 builder.Services.AddHostedService<GameCleanupService>();
+
+builder.Services.AddRateLimiter(options =>
+{
+	options.AddPolicy("api", httpContext =>
+		RateLimitPartition.GetFixedWindowLimiter(
+			partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+			factory: _ => new FixedWindowRateLimiterOptions
+			{
+				PermitLimit = 30,
+				Window = TimeSpan.FromMinutes(1),
+				QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+				QueueLimit = 0,
+			}));
+
+	options.RejectionStatusCode = 429;
+});
 
 builder.Services.AddCors(options =>
 {
@@ -42,7 +59,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
-app.MapControllers();
+app.UseRateLimiter();
+app.MapControllers().RequireRateLimiting("api");
 app.MapHub<GameHub>("/hubs/game");
 
 app.Run();
