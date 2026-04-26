@@ -207,16 +207,16 @@ public static class DatabaseSeeder
 				]
 			},
 			new() {
-				Name = "Ambassador's Reception",
+				Name = "Banquet Hall",
 				Roles =
 				[
-					new () { Name = "Ambassador" },
-					new () { Name = "Diplomat" },
-					new () { Name = "Bodyguard" },
+					new () { Name = "Host" },
+					new () { Name = "Guest of Honor" },
 					new () { Name = "Caterer" },
-					new () { Name = "Journalist" },
-					new () { Name = "Translator" },
-					new () { Name = "Guest" },
+					new () { Name = "Bartender" },
+					new () { Name = "Event Planner" },
+					new () { Name = "Waiter" },
+					new () { Name = "Gate Crasher" },
 				]
 			},
 			new() {
