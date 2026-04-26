@@ -16,6 +16,7 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<GameTimerService>();
 builder.Services.AddSingleton<VoteService>();
 builder.Services.AddHostedService<TimerSyncService>();
+builder.Services.AddHostedService<GameCleanupService>();
 
 builder.Services.AddCors(options =>
 {
