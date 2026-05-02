@@ -1,4 +1,4 @@
-# Spyfall API
+# Spyfall Server
 
 ASP.NET Core 9 Web API backend for the Spyfall party game. Manages game sessions, player state, voting, and game timers. Uses SignalR for real-time communication with the [spyfall-client](../spyfall-client) Angular frontend.
 
@@ -64,18 +64,18 @@ ConnectionStrings__DefaultConnection=Server=localhost;Database=spyfall;User=root
 1. Apply database migrations:
 
 ```bash
-cd SpyFall.Api
+cd SpyFall.Server
 dotnet ef database update
 ```
 
-2. Start the API:
+2. Start the Server:
 
 ```bash
 dotnet run
 ```
 
-The API runs at `http://localhost:5000` by default (see `Properties/launchSettings.json`).
+The Server runs at `http://localhost:5000` by default (see `Properties/launchSettings.json`).
 
 ### CORS
 
-The API allows requests from `http://localhost:4200` (Angular dev server) and `https://spyfall.collinkoldoff.dev`. Update `Program.cs` to add additional origins.
+The Server allows requests from `http://localhost:4200` (Angular dev server) and `https://spyfall.collinkoldoff.dev`. Update `Program.cs` to add additional origins.
