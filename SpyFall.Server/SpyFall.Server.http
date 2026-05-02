@@ -1,0 +1,6 @@
+@SpyFall.Server_HostAddress = http://localhost:5042
+
+GET {{SpyFall.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

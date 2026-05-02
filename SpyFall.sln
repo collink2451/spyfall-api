@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpyFall.Api", "SpyFall.Api\SpyFall.Api.csproj", "{E97AA2CF-646D-429A-8351-099D9D0EE38B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpyFall.Server", "SpyFall.Server\SpyFall.Server.csproj", "{E97AA2CF-646D-429A-8351-099D9D0EE38B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
